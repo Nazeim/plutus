@@ -39,6 +39,7 @@ import           GHC.Generics                          (Generic)
 import qualified Language.PlutusTx                     as PlutusTx
 import           Language.PlutusTx.Prelude             hiding (Applicative (..), check)
 import           Ledger                                hiding (to)
+import qualified Ledger.Ada                            as Ada
 import           Ledger.Constraints                    (TxConstraints)
 import qualified Ledger.Constraints                    as Constraints
 import qualified Ledger.Typed.Scripts                  as Scripts
@@ -160,9 +161,19 @@ transition State{stateData=oldData, stateValue=oldValue} input = case (oldData, 
         Just ( constraints
              , State
                 { stateData = Locked mph tn nextSecret
-                , stateValue = oldValue - takenOut
+                , stateValue = if currentSecret == nextSecret && oldValue == takenOut && takenOut `V.gt` Ada.lovelaceValueOf 50
+                               then oldValue
+                               else oldValue - takenOut
                 }
              )
+        -- | otherwise ->
+        -- let constraints = Constraints.mustForgeCurrency mph tn 0 in
+        -- Just ( constraints
+        --      , State
+        --         { stateData = Locked mph tn nextSecret
+        --         , stateValue = oldValue
+        --         }
+        --      )
     _ -> Nothing
 
 {-# INLINABLE machine #-}
